@@ -152,7 +152,7 @@ const edit = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { username, password, walletAddress } = req.body;
         // Find the user by username
         const user = await User.findOne({ username, deleted: false }).populate({
             path: 'roles'
@@ -167,6 +167,12 @@ const login = async (req, res) => {
             res.status(401).json({ error: 'Authentication failed,password does not match' });
             return;
         }
+
+        if (walletAddress && !user.walletAddress) {
+            user.walletAddress = walletAddress;
+            await user.save();
+        }
+
         // Create a JWT token
         const token = jwt.sign({ userId: user._id }, 'secret_key', { expiresIn: '1d' });
 

@@ -63,31 +63,63 @@ function SignIn() {
     touched,
     handleBlur,
     handleChange,
-    resetForm,
     handleSubmit,
   } = useFormik({
     initialValues: initialValues,
     validationSchema: loginSchema,
-    onSubmit: (values, { resetForm }) => {
-      login();
+    onSubmit: async (formValues, { resetForm }) => {
+      await login(formValues, resetForm);
     },
+
   });
   const navigate = useNavigate();
 
-  const login = async () => {
+  const connectWallet = async () => {
+    console.log("🔍 Checking for MetaMask...");
+    if (window.ethereum) {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        return accounts[0];
+      } catch (err) {
+        toast.error("Wallet connection rejected.");
+        return null;
+      }
+    } else {
+      toast.error("MetaMask is not installed.");
+      return null;
+    }
+  };
+
+  const login = async (values, resetForm) => {
+    setIsLoding(true);
+
+    const walletAddress = await connectWallet();
+
+    if (!walletAddress) {
+      toast.error("Please connect your wallet to continue.");
+      setIsLoding(false);
+      return;
+    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     try {
-      setIsLoding(true);
-      let response = await postApi("api/user/login", values, checkBox);
+      const loginPayload = {
+        ...values,
+        walletAddress,
+      };
+
+      const response = await postApi("api/user/login", loginPayload, checkBox);
+
       if (response && response.status === 200) {
-        navigate("/superAdmin");
         toast.success("Login Successfully!");
         resetForm();
-        dispatch(setUser(response?.data?.user))
+        dispatch(setUser(response?.data?.user));
+        navigate("/superAdmin");
       } else {
-        toast.error(response.response.data?.error);
+        toast.error(response?.response?.data?.error || "Login failed");
       }
     } catch (e) {
-      console.log(e);
+      toast.error("Something went wrong.");
     } finally {
       setIsLoding(false);
     }

@@ -11,6 +11,10 @@ const user = new mongoose.Schema({
         type: String,
         required: true,
     },
+    walletAddress: {
+        type: String,
+        default: null,
+    },
     role: { type: String, default: 'user' },
     emailsent: { type: Number, default: 0 },
     textsent: { type: Number, default: 0 },
